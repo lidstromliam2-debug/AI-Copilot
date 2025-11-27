@@ -1,0 +1,46 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  password  String
+  createdAt DateTime  @default(now())
+  trades    Trade[]
+  journals  Journal[]
+}
+
+model Trade {
+  id         String   @id @default(cuid())
+  userId     String
+  asset      String
+  direction  String   // long / short
+  entry      Float
+  stopLoss   Float
+  takeProfit Float?
+  size       Float
+  result     Float?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model Journal {
+  id         String   @id @default(cuid())
+  userId     String
+  date       DateTime @default(now())
+  notes      String
+  emotional  String?
+  screenshot String?
+  user       User     @relation(fields: [userId], references: [id])
+}
