@@ -33,7 +33,7 @@ export default function CopilotChat({ chartImages = [], onClearImages }: { chart
   }
 
   function insertChartPrompt() {
-    setInput("Analyze the uploaded chart(s) and give a full actionable trade idea with entry, stop loss, take profit, and reasoning.");
+    setInput("Analysera de uppladdade chart-bilderna och leverera en komplett, handlingsbar trade setup enligt EXAKTA instruktioner och formatet i systemprompten. Inkludera ALLA sektioner: entry, exakt tidsram och motivering, stop loss, flera take profit-nivåer (TP1, TP2, TP3), motivation, riskhantering, varning för falska signaler, och en tydlig validerings-/backtestplan. Motivera varje nivå och beslut utifrån prisstruktur, volym, likviditet och tidigare price action. Följ formatet till punkt och pricka – inga sektioner får utelämnas.");
     inputRef.current?.focus();
   }
 
