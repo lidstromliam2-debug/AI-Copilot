@@ -5,20 +5,23 @@ import { useState, useRef } from "react";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 
-export default function CopilotChat({ chartImages = [], onClearImages }: { chartImages?: any[]; onClearImages?: () => void }) {
+export default function CopilotChat() {
   const [input, setInput] = useState("");
   const initialMessages = [
     { role: "system", text: "You are Quantpilot — a professional trading copilot." },
     { role: "assistant", text: "Welcome — upload a chart or ask a question to get started." },
   ];
   const [messages, setMessages] = useState<{ role: string; text: string }[]>(initialMessages);
-    function clearChat() {
-      setMessages(initialMessages);
-      setInput("");
-      if (onClearImages) onClearImages();
-    }
-  const [loading, setLoading] = useState(false);
+  const [images, setImages] = useState<{ file: File; label: string }[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  function clearChat() {
+    setMessages(initialMessages);
+    setInput("");
+    setImages([]);
+  }
 
   function downloadLastAISvar() {
     const last = [...messages].reverse().find(m => m.role === "assistant");
@@ -37,23 +40,37 @@ export default function CopilotChat({ chartImages = [], onClearImages }: { chart
     inputRef.current?.focus();
   }
 
+  function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    const filesWithLabels = files.map(file => ({ file, label: "" }));
+    setImages(prev => [...prev, ...filesWithLabels]);
+  }
+
+  function removeImage(idx: number) {
+    setImages(prev => prev.filter((_, i) => i !== idx));
+  }
+
+  function handleLabelChange(idx: number, value: string) {
+    setImages(prev => prev.map((img, i) => i === idx ? { ...img, label: value } : img));
+  }
+
   async function send() {
-    if (!input.trim() && (!chartImages || chartImages.length === 0)) return;
+    if (!input.trim() && images.length === 0) return;
     const userText = input.trim();
     setMessages((m) => [...m, { role: "user", text: userText || "[Chart analysis]" }]);
     setInput("");
     setLoading(true);
 
-    const imagesPayload: { url: string }[] = [];
-    if (chartImages && chartImages.length > 0) {
-      for (const img of chartImages) {
+    const imagesPayload: { url: string; label: string }[] = [];
+    if (images.length > 0) {
+      for (const img of images) {
         const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = e => resolve((e.target?.result as string)?.split(",")[1] || "");
           reader.onerror = reject;
           reader.readAsDataURL(img.file);
         });
-        imagesPayload.push({ url: `data:image/png;base64,${base64}` });
+        imagesPayload.push({ url: `data:image/png;base64,${base64}`, label: img.label || "BTCUSD chart" });
       }
     }
 
@@ -73,7 +90,7 @@ export default function CopilotChat({ chartImages = [], onClearImages }: { chart
         }
       }
       setMessages((m) => [...m, { role: "assistant", text: aiText || "[No response]" }]);
-      if (onClearImages) onClearImages();
+      setImages([]);
     } catch (err) {
       setMessages((m) => [...m, { role: "assistant", text: "[Fel vid AI-anrop]" }]);
     }
@@ -102,16 +119,54 @@ export default function CopilotChat({ chartImages = [], onClearImages }: { chart
         ))}
         {loading && <div className="text-xs text-gray-400">AI skriver…</div>}
       </div>
+      {/* Visa uppladdade bilder och label-inputs */}
+      {images.length > 0 && (
+        <div className="flex flex-wrap gap-4 my-2">
+          {images.map((img, idx) => (
+            <div key={idx} className="flex flex-col items-center">
+              <img
+                src={URL.createObjectURL(img.file)}
+                alt={`chart-${idx}`}
+                className="w-20 h-20 object-cover rounded border mb-1"
+              />
+              <input
+                type="text"
+                placeholder="Label (ex: BTCUSD 1h)"
+                className="border rounded px-2 py-1 text-xs"
+                value={img.label}
+                onChange={e => handleLabelChange(idx, e.target.value)}
+                style={{ width: 100 }}
+              />
+              <button
+                type="button"
+                className="text-xs text-red-500 mt-1"
+                onClick={() => removeImage(idx)}
+              >Ta bort</button>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="flex gap-2 items-center mt-2">
         <Input
           ref={inputRef}
-          placeholder="Ask e.g. 'What position should I take on ETH based on this chart?'"
+          placeholder="Ask e.g. 'What position should I take on BTCUSD based on this chart?'"
           className="flex-1 text-black"
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter" && !loading) send(); }}
         />
-        <Button className="bg-black text-white px-6" type="button" onClick={send} disabled={loading || (!input && (!chartImages || chartImages.length === 0))}>
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          ref={fileInputRef}
+          style={{ display: "none" }}
+          onChange={handleFiles}
+        />
+        <Button type="button" onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+          Upload Chart(s)
+        </Button>
+        <Button className="bg-black text-white px-6" type="button" onClick={send} disabled={loading || (!input && images.length === 0)}>
           Send
         </Button>
       </div>

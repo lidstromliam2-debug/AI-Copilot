@@ -5,7 +5,7 @@ import { Input } from "../ui/Input";
 
 export default function CopilotChat() {
   const [message, setMessage] = useState("");
-  const [images, setImages] = useState<File[]>([]);
+  const [images, setImages] = useState<{ file: File; label: string }[]>([]);
   const initialHistory = [
     { role: "system", content: "You are Quantpilot — a professional trading copilot." },
     { role: "assistant", content: "Welcome — upload a chart or ask a question to get started." }
@@ -27,13 +27,20 @@ export default function CopilotChat() {
   // Handle file selection
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setImages((prev) => [...prev, ...files]);
+    // Default label: empty string, user can edit later
+    const filesWithLabels = files.map(file => ({ file, label: "" }));
+    setImages((prev) => [...prev, ...filesWithLabels]);
   };
 
 
   // Remove image
   const removeImage = (idx: number) => {
     setImages((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  // Hantera label-input för varje bild
+  const handleLabelChange = (idx: number, value: string) => {
+    setImages((prev) => prev.map((img, i) => i === idx ? { ...img, label: value } : img));
   };
 
 
@@ -45,7 +52,7 @@ export default function CopilotChat() {
     try {
       // Skicka både text och bilder (om finns) till /api/copilot/chat
       let imagesWithLabels = await Promise.all(
-        images.map(async (file) => {
+        images.map(async ({ file, label }) => {
           const base64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => {
@@ -59,7 +66,7 @@ export default function CopilotChat() {
             reader.onerror = reject;
             reader.readAsDataURL(file);
           });
-          return { url: `data:image/png;base64,${base64}` };
+          return { url: `data:image/png;base64,${base64}`, label: label || "BTCUSD chart" };
         })
       );
       const userMsg = message || (imagesWithLabels.length > 0 ? "Analysera dessa charts" : "");
@@ -112,13 +119,40 @@ export default function CopilotChat() {
         {loading && <div className="text-xs text-gray-400">AI skriver…</div>}
         {error && <div className="text-xs text-red-500">{error}</div>}
       </div>
+      {/* Visa uppladdade bilder och label-inputs */}
+      {images.length > 0 && (
+        <div className="flex flex-wrap gap-4 my-2">
+          {images.map((img, idx) => (
+            <div key={idx} className="flex flex-col items-center">
+              <img
+                src={URL.createObjectURL(img.file)}
+                alt={`chart-${idx}`}
+                className="w-20 h-20 object-cover rounded border mb-1"
+              />
+              <input
+                type="text"
+                placeholder="Label (ex: BTCUSD 1h)"
+                className="border rounded px-2 py-1 text-xs"
+                value={img.label}
+                onChange={e => handleLabelChange(idx, e.target.value)}
+                style={{ width: 100 }}
+              />
+              <button
+                type="button"
+                className="text-xs text-red-500 mt-1"
+                onClick={() => removeImage(idx)}
+              >Ta bort</button>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="flex gap-2 items-center mt-2">
         <Input
-          placeholder="Ask e.g. 'What position should I take on ETH based on this chart?'"
+          placeholder="Ask e.g. 'What position should I take on BTCUSD based on this chart?'"
           className="flex-1"
           value={message}
           onChange={e => setMessage(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter" && message && !loading) handleSend(); }}
+          onKeyDown={e => { if (e.key === "Enter" && (message || images.length > 0) && !loading) handleSend(); }}
         />
         <input
           type="file"
