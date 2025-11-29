@@ -31,7 +31,7 @@ export default function CopilotPage() {
 							</div>
 							{/* Copilot Chat */}
 							<div className="w-full max-w-2xl mb-6">
-								<CopilotChat chartImages={chartImages} onClearImages={() => setChartImages([])} />
+								<CopilotChat />
 							</div>
 							{/* Upload & Analyze */}
 							<div className="w-full max-w-2xl">
