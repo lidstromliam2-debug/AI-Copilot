@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",
-    "@prisma/client": "^7.0.0",
+    "@prisma/client": "^7.0.1",
     "autoprefixer": "^10.4.22",
     "bcrypt": "^6.0.0",
     "formidable": "^3.5.4",
@@ -20,7 +20,7 @@
     "node-fetch": "^3.3.2",
     "openai": "^6.9.1",
     "postcss": "^8.5.6",
-    "prisma": "^6.19.0",
+    "prisma": "^7.0.1",
     "react": "19.2.0",
     "react-dom": "^19.2.0",
     "sharp": "^0.34.5",
